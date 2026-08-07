@@ -1,0 +1,6 @@
+{
+  "name": "YouTube Shorts Production Dashboard",
+  "description": "Enterprise Content Management Dashboard for autonomous n8n YouTube Shorts production pipelines, queue management, AI model routing, and channel analytics.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
