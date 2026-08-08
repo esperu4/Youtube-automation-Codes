@@ -38,7 +38,7 @@ export const SystemHealthView: React.FC<SystemHealthViewProps> = ({
     <div className="space-y-6">
       
       {/* Header Controls */}
-      <div className="bg-white border border-slate-200 rounded-none p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-sm">
+      <div className="bg-white border border-slate-200 rounded-lg p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-sm">
         <div>
           <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
             <Cpu className="h-5 w-5 text-indigo-600" />
@@ -49,10 +49,10 @@ export const SystemHealthView: React.FC<SystemHealthViewProps> = ({
           </p>
         </div>
 
-        <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-none border border-slate-200 text-xs">
+        <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-lg border border-slate-200 text-xs">
           <button
             onClick={() => setActiveTab('containers')}
-            className={`px-3 py-1.5 rounded-none text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer ${
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer ${
               activeTab === 'containers' ? 'bg-indigo-600 text-white' : 'text-slate-600 hover:text-slate-900'
             }`}
           >
@@ -60,7 +60,7 @@ export const SystemHealthView: React.FC<SystemHealthViewProps> = ({
           </button>
           <button
             onClick={() => setActiveTab('ai_models')}
-            className={`px-3 py-1.5 rounded-none text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer ${
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer ${
               activeTab === 'ai_models' ? 'bg-indigo-600 text-white' : 'text-slate-600 hover:text-slate-900'
             }`}
           >
@@ -68,7 +68,7 @@ export const SystemHealthView: React.FC<SystemHealthViewProps> = ({
           </button>
           <button
             onClick={() => setActiveTab('dlq')}
-            className={`px-3 py-1.5 rounded-none text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer ${
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer ${
               activeTab === 'dlq' ? 'bg-indigo-600 text-white' : 'text-slate-600 hover:text-slate-900'
             }`}
           >
@@ -83,7 +83,7 @@ export const SystemHealthView: React.FC<SystemHealthViewProps> = ({
           
           {/* Top Status Bar */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="bg-white border border-slate-200 rounded-none p-4 flex items-center justify-between shadow-sm">
+            <div className="bg-white border border-slate-200 rounded-lg p-4 flex items-center justify-between shadow-sm">
               <div>
                 <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Circuit Breaker Status</div>
                 <div className="text-lg font-bold text-emerald-600 mt-0.5 font-mono">
@@ -93,7 +93,7 @@ export const SystemHealthView: React.FC<SystemHealthViewProps> = ({
               <CheckCircle2 className="h-6 w-6 text-emerald-600" />
             </div>
 
-            <div className="bg-white border border-slate-200 rounded-none p-4 flex items-center justify-between shadow-sm">
+            <div className="bg-white border border-slate-200 rounded-lg p-4 flex items-center justify-between shadow-sm">
               <div>
                 <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Active n8n Workflows</div>
                 <div className="text-lg font-bold text-indigo-600 mt-0.5 font-mono">
@@ -103,7 +103,7 @@ export const SystemHealthView: React.FC<SystemHealthViewProps> = ({
               <Layers className="h-6 w-6 text-indigo-600" />
             </div>
 
-            <div className="bg-white border border-slate-200 rounded-none p-4 flex items-center justify-between shadow-sm">
+            <div className="bg-white border border-slate-200 rounded-lg p-4 flex items-center justify-between shadow-sm">
               <div>
                 <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Redis Stream Consumer Lag</div>
                 <div className="text-lg font-bold text-amber-600 mt-0.5 font-mono">
@@ -115,7 +115,7 @@ export const SystemHealthView: React.FC<SystemHealthViewProps> = ({
           </div>
 
           {/* Docker Container Table */}
-          <div className="bg-white border border-slate-200 rounded-none p-5 space-y-4 shadow-sm">
+          <div className="bg-white border border-slate-200 rounded-lg p-5 space-y-4 shadow-sm">
             <div className="flex items-center justify-between border-b border-slate-200 pb-3">
               <div>
                 <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
@@ -140,6 +140,17 @@ export const SystemHealthView: React.FC<SystemHealthViewProps> = ({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 font-mono text-[11px]">
+                  {health.containers.length === 0 && (
+                    <tr>
+                      <td colSpan={7} className="py-10 text-center font-sans">
+                        <Server className="h-8 w-8 text-slate-200 mx-auto mb-2" />
+                        <p className="text-sm font-semibold text-slate-600">No container telemetry</p>
+                        <p className="text-xs text-slate-400 mt-1">
+                          Container status will appear once the VPS integration is connected.
+                        </p>
+                      </td>
+                    </tr>
+                  )}
                   {health.containers.map((container, idx) => (
                     <tr key={idx} className="hover:bg-slate-50 transition-colors">
                       <td className="py-3 px-3 font-bold font-sans text-slate-900">{container.name}</td>
@@ -149,7 +160,7 @@ export const SystemHealthView: React.FC<SystemHealthViewProps> = ({
                       <td className="py-3 px-3 font-bold text-blue-600">{container.memory_mb} MB</td>
                       <td className="py-3 px-3 text-slate-500">{container.uptime}</td>
                       <td className="py-3 px-3 text-right">
-                        <span className="px-2 py-0.5 rounded-none text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 uppercase font-sans">
+                        <span className="px-2 py-0.5 rounded-lg text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 uppercase font-sans">
                           {container.status}
                         </span>
                       </td>
@@ -165,7 +176,7 @@ export const SystemHealthView: React.FC<SystemHealthViewProps> = ({
 
       {/* TAB 2: AI Multi-Model Strategy (PDF Chapter 9) */}
       {activeTab === 'ai_models' && (
-        <div className="bg-white border border-slate-200 rounded-none p-5 space-y-4 shadow-sm">
+        <div className="bg-white border border-slate-200 rounded-lg p-5 space-y-4 shadow-sm">
           <div>
             <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
               <Zap className="h-4 w-4 text-amber-500 fill-amber-500" />
@@ -190,6 +201,17 @@ export const SystemHealthView: React.FC<SystemHealthViewProps> = ({
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
+                {models.length === 0 && (
+                  <tr>
+                    <td colSpan={7} className="py-10 text-center">
+                      <Zap className="h-8 w-8 text-slate-200 mx-auto mb-2" />
+                      <p className="text-sm font-semibold text-slate-600">No AI models configured</p>
+                      <p className="text-xs text-slate-400 mt-1">
+                        Model routing configs will appear once set up on the backend.
+                      </p>
+                    </td>
+                  </tr>
+                )}
                 {models.map((m) => (
                   <tr key={m.id} className="hover:bg-slate-50 transition-colors">
                     <td className="py-3 px-3">
@@ -212,7 +234,7 @@ export const SystemHealthView: React.FC<SystemHealthViewProps> = ({
                     <td className="py-3 px-3 text-right">
                       <button
                         onClick={() => onUpdateModel(m.id, { is_active: !m.is_active })}
-                        className={`px-2.5 py-1 rounded-none text-[10px] font-bold uppercase tracking-wider transition-colors cursor-pointer border ${
+                        className={`px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-colors cursor-pointer border ${
                           m.is_active
                             ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
                             : 'bg-slate-100 text-slate-500 border-slate-200'
@@ -231,7 +253,7 @@ export const SystemHealthView: React.FC<SystemHealthViewProps> = ({
 
       {/* TAB 3: Dead Letter Queue (DLQ) */}
       {activeTab === 'dlq' && (
-        <div className="bg-white border border-slate-200 rounded-none p-5 space-y-4 shadow-sm">
+        <div className="bg-white border border-slate-200 rounded-lg p-5 space-y-4 shadow-sm">
           <div className="flex items-center justify-between border-b border-slate-200 pb-3">
             <div>
               <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
@@ -242,7 +264,7 @@ export const SystemHealthView: React.FC<SystemHealthViewProps> = ({
                 Tasks that exhausted max retry attempts in n8n error handler WF-15
               </p>
             </div>
-            <span className="px-2.5 py-1 bg-rose-50 text-rose-700 border border-rose-200 rounded-none text-xs font-mono font-bold">
+            <span className="px-2.5 py-1 bg-rose-50 text-rose-700 border border-rose-200 rounded-lg text-xs font-mono font-bold">
               {dlqTasks.length} Failed Task(s)
             </span>
           </div>
@@ -251,19 +273,19 @@ export const SystemHealthView: React.FC<SystemHealthViewProps> = ({
             {dlqTasks.map((dlq) => (
               <div
                 key={dlq.id}
-                className="bg-slate-50 border border-rose-200 rounded-none p-4 space-y-2 text-xs"
+                className="bg-slate-50 border border-rose-200 rounded-lg p-4 space-y-2 text-xs"
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <span className="font-bold text-slate-900">{dlq.task_name}</span>
-                    <span className="px-2 py-0.5 rounded-none bg-white border border-slate-200 text-slate-700 font-mono text-[10px] font-bold">
+                    <span className="px-2 py-0.5 rounded-lg bg-white border border-slate-200 text-slate-700 font-mono text-[10px] font-bold">
                       {dlq.workflow_id}
                     </span>
                   </div>
                   <span className="text-[11px] text-slate-500 font-medium">{dlq.created_at}</span>
                 </div>
 
-                <div className="text-rose-700 font-mono bg-rose-50/50 p-2.5 rounded-none border border-rose-200 text-[11px] font-semibold">
+                <div className="text-rose-700 font-mono bg-rose-50/50 p-2.5 rounded-lg border border-rose-200 text-[11px] font-semibold">
                   {dlq.error_message}
                 </div>
 
@@ -276,7 +298,7 @@ export const SystemHealthView: React.FC<SystemHealthViewProps> = ({
 
                   <button
                     onClick={() => onRetryDlqTask(dlq.id)}
-                    className="px-3 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded-none text-[10px] font-bold uppercase tracking-wider flex items-center gap-1 cursor-pointer transition-colors"
+                    className="px-3 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-[10px] font-bold uppercase tracking-wider flex items-center gap-1 cursor-pointer transition-colors"
                   >
                     <RefreshCw className="h-3 w-3" /> Re-Queue Task
                   </button>
@@ -285,7 +307,7 @@ export const SystemHealthView: React.FC<SystemHealthViewProps> = ({
             ))}
 
             {dlqTasks.length === 0 && (
-              <div className="p-8 text-center text-slate-500 text-xs border border-dashed border-slate-300 rounded-none font-semibold">
+              <div className="p-8 text-center text-slate-500 text-xs border border-dashed border-slate-300 rounded-lg font-semibold">
                 Dead Letter Queue is empty. All n8n workflows running cleanly!
               </div>
             )}

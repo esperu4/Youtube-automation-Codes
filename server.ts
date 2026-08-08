@@ -1,22 +1,58 @@
 import express from "express";
+import os from "os";
 import path from "path";
 import { createServer as createViteServer } from "vite";
 import { GoogleGenAI, Type } from "@google/genai";
 
-import {
-  INITIAL_CHANNELS,
-  INITIAL_VIDEOS,
-  INITIAL_SYSTEM_HEALTH,
-  INITIAL_AI_MODELS,
-  INITIAL_DLQ_TASKS,
-  ANALYTICS_DATA
-} from "./src/data/mockData.ts";
-import { Channel, VideoItem, DLQTask } from "./src/types.ts";
+import { Channel, VideoItem, DLQTask, AIModelConfig, AnalyticsOverview, ContainerStatus, SystemHealthData } from "./src/types.ts";
 
-let channelsStore: Channel[] = [...INITIAL_CHANNELS];
-let videosStore: VideoItem[] = [...INITIAL_VIDEOS];
-let dlqStore: DLQTask[] = [...INITIAL_DLQ_TASKS];
-let modelsStore = [...INITIAL_AI_MODELS];
+let channelsStore: Channel[] = [];
+let videosStore: VideoItem[] = [];
+let dlqStore: DLQTask[] = [];
+let modelsStore: AIModelConfig[] = [];
+
+function buildHealth(): SystemHealthData {
+  const totalMem = os.totalmem() / (1024 ** 3);
+  const freeMem = os.freemem() / (1024 ** 3);
+  const usedMem = totalMem - freeMem;
+  const cpus = os.cpus().length;
+  const load1 = os.loadavg()[0];
+  const cpuPct = Math.min(100, Math.round((load1 / cpus) * 100));
+
+  const containers: ContainerStatus[] = [];
+
+  return {
+    cpu_pct: cpuPct,
+    memory_pct: Math.min(100, Math.round((usedMem / totalMem) * 100)),
+    memory_used_gb: Number(usedMem.toFixed(2)),
+    memory_total_gb: Number(totalMem.toFixed(2)),
+    storage_pct: 0,
+    storage_used_gb: 0,
+    storage_total_gb: 0,
+    redis_queue_lag: 0,
+    active_workflows_running: 0,
+    circuit_breaker: "CLOSED",
+    containers,
+  };
+}
+
+function buildAnalytics(): AnalyticsOverview {
+  const published = videosStore.filter((v) => v.status === "published" && v.views != null);
+  const avgViewCount = published.length
+    ? Math.round(published.reduce((sum, v) => sum + (v.views || 0), 0) / published.length)
+    : 0;
+
+  return {
+    total_channels: channelsStore.length,
+    videos_published_this_week: videosStore.filter((v) => v.status === "published").length,
+    avg_view_count: avgViewCount,
+    system_health_pct: 0,
+    weekly_views_data: [],
+    revenue_projections: [],
+    cost_breakdown: [],
+    vtr_distribution: [],
+  };
+}
 
 async function startServer() {
   const app = express();
@@ -56,7 +92,7 @@ async function startServer() {
       status: "active",
       subscribers: 0,
       total_views: 0,
-      avg_vtr: 65.0,
+      avg_vtr: 0,
       created_at: new Date().toISOString().split("T")[0],
       daily_budget_usd: Number(req.body.daily_budget_usd) || 1.5,
       current_daily_spend_usd: 0.0,
@@ -93,7 +129,10 @@ async function startServer() {
   });
 
   app.post("/api/videos", (req, res) => {
-    const channel = channelsStore.find((c) => c.id === Number(req.body.channel_id)) || channelsStore[0];
+    const channel = channelsStore.find((c) => c.id === Number(req.body.channel_id));
+    if (!channel) {
+      return res.status(400).json({ error: "A valid channel must be selected." });
+    }
     const newVideo: VideoItem = {
       id: Date.now(),
       channel_id: channel.id,
@@ -105,18 +144,18 @@ async function startServer() {
       pipeline_type: req.body.pipeline_type || "from_scratch",
       status: "draft",
       stage: req.body.stage || "research",
-      quality_score: req.body.quality_score || 85.0,
+      quality_score: req.body.quality_score || 0,
       quality_breakdown: req.body.quality_breakdown || {
-        hook_strength: 85,
-        narrative_coherence: 85,
-        visual_quality: 85,
-        audio_quality: 85,
-        seo_optimization: 85,
+        hook_strength: 0,
+        narrative_coherence: 0,
+        visual_quality: 0,
+        audio_quality: 0,
+        seo_optimization: 0,
       },
       duration_seconds: req.body.duration_seconds || 45,
       storage_path: `/minio/videos/short_${Date.now()}.mp4`,
-      thumbnail_path: req.body.thumbnail_path || "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=600&auto=format&fit=crop&q=80",
-      hook_text: req.body.hook_text || "Stop scrolling right now!",
+      thumbnail_path: req.body.thumbnail_path || "",
+      hook_text: req.body.hook_text || "",
       voiceover_tone: req.body.voiceover_tone || "Energetic",
       created_at: new Date().toISOString().replace("T", " ").substring(0, 19),
       script_scenes: req.body.script_scenes || [],
@@ -145,7 +184,6 @@ async function startServer() {
     if (video) {
       video.status = "failed";
       video.rejection_reason = reason || "Manual review rejected video.";
-      // Create a DLQ entry or trigger partial regeneration
       dlqStore.unshift({
         id: `dlq_${Date.now()}`,
         workflow_id: "WF-08-quality-checker",
@@ -175,9 +213,6 @@ async function startServer() {
         video.status = "published";
         video.published_at = new Date().toISOString().replace("T", " ").substring(0, 19);
         video.youtube_video_id = `yt_${Date.now().toString().slice(-6)}`;
-        video.views = Math.floor(Math.random() * 5000) + 1200;
-        video.likes = Math.floor(video.views * 0.08);
-        video.vtr = Number((Math.random() * 15 + 65).toFixed(1));
       }
       res.json({ success: true, video });
     } else {
@@ -187,15 +222,7 @@ async function startServer() {
 
   // 3. System & Analytics API
   app.get("/api/system/health", (req, res) => {
-    // Dynamically perturb CPU and Memory slightly for live feel
-    const jitter = (Math.random() - 0.5) * 2;
-    const currentHealth = {
-      ...INITIAL_SYSTEM_HEALTH,
-      cpu_pct: Number((INITIAL_SYSTEM_HEALTH.cpu_pct + jitter).toFixed(1)),
-      memory_pct: Number((INITIAL_SYSTEM_HEALTH.memory_pct + jitter * 0.5).toFixed(1)),
-      redis_queue_lag: Math.max(0, Math.floor(INITIAL_SYSTEM_HEALTH.redis_queue_lag + jitter * 2)),
-    };
-    res.json(currentHealth);
+    res.json(buildHealth());
   });
 
   app.get("/api/system/dlq", (req, res) => {
@@ -209,7 +236,7 @@ async function startServer() {
   });
 
   app.get("/api/analytics/performance", (req, res) => {
-    res.json(ANALYTICS_DATA);
+    res.json(buildAnalytics());
   });
 
   app.get("/api/models", (req, res) => {
@@ -231,34 +258,36 @@ async function startServer() {
   app.post("/api/n8n/trigger-planner", (req, res) => {
     const { channel_id } = req.body;
     const targetChannel = channelsStore.find((c) => c.id === Number(channel_id)) || channelsStore[0];
+    if (!targetChannel) {
+      return res.status(400).json({ error: "No channel configured yet. Add a channel first." });
+    }
 
-    // Create 2 new video tasks for this channel
-    const newShort1: VideoItem = {
+    const newShort: VideoItem = {
       id: Date.now(),
       channel_id: targetChannel.id,
       channel_name: targetChannel.name,
       content_task_id: Math.floor(Math.random() * 900) + 100,
-      title: `AI Trend Breakdown: ${targetChannel.niche} Update #${Math.floor(Math.random() * 50) + 1}`,
-      description: `Auto-generated YouTube Short by n8n WF-01 Daily Planner for ${targetChannel.name}.`,
+      title: `New Short for ${targetChannel.name}`,
+      description: `Auto-generated YouTube Short for ${targetChannel.name}.`,
       tags: [targetChannel.niche, "Shorts", "Trending"],
       pipeline_type: "from_scratch",
       status: "draft",
       stage: "research",
-      quality_score: 86.5,
-      quality_breakdown: { hook_strength: 88, narrative_coherence: 85, visual_quality: 86, audio_quality: 87, seo_optimization: 86 },
+      quality_score: 0,
+      quality_breakdown: { hook_strength: 0, narrative_coherence: 0, visual_quality: 0, audio_quality: 0, seo_optimization: 0 },
       duration_seconds: 45,
       storage_path: `/minio/videos/auto_${Date.now()}.mp4`,
-      thumbnail_path: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=600&auto=format&fit=crop&q=80",
-      hook_text: "You will not believe what just happened in this industry!",
+      thumbnail_path: "",
+      hook_text: "",
       voiceover_tone: "Enthusiastic",
       created_at: new Date().toISOString().replace("T", " ").substring(0, 19),
     };
 
-    videosStore.unshift(newShort1);
+    videosStore.unshift(newShort);
     res.json({
       success: true,
-      message: `WF-01 Daily Content Planner triggered for channel "${targetChannel.name}". Created video task #${newShort1.id}.`,
-      video: newShort1,
+      message: `WF-01 Daily Content Planner triggered for channel "${targetChannel.name}". Created video task #${newShort.id}.`,
+      video: newShort,
     });
   });
 
@@ -329,41 +358,8 @@ Ensure output is valid JSON matching this structure.`;
       res.json({ success: true, script: parsedData });
     } catch (err: any) {
       console.error("Gemini Script Generation Error:", err);
-      // Fallback mock payload if offline or missing key
-      res.json({
-        success: true,
-        is_fallback: true,
-        script: {
-          title: `Viral Breakdown: ${req.body.topic || "AI Technology"} 🚀`,
-          hook_text: `Stop scrolling right now if you want to master ${req.body.topic || "AI"} in 30 seconds!`,
-          description: `Everything you need to know about ${req.body.topic || "tech breakthroughs"} in short format. #Shorts #Tech #Innovations`,
-          tags: ["Shorts", "Tech", "Tutorial", "AI", "Trends"],
-          voiceover_tone: "High Energy & Direct",
-          estimated_quality_score: 91.5,
-          script_scenes: [
-            {
-              scene_number: 1,
-              timeframe: "0:00 - 0:03",
-              visual_prompt: "Glowing neon cyberpunk city with futuristic data streams",
-              narration: `Stop scrolling right now if you want to master ${req.body.topic || "AI"} in 30 seconds!`,
-              text_overlay: "MUST WATCH 🚀",
-            },
-            {
-              scene_number: 2,
-              timeframe: "0:03 - 0:20",
-              visual_prompt: "Sleek animated 3D graphical breakdown of modern software architecture",
-              narration: "First, understanding the core mechanism allows you to bypass 90% of traditional friction.",
-              text_overlay: "Step 1: Simplify 🧠",
-            },
-            {
-              scene_number: 3,
-              timeframe: "0:20 - 0:45",
-              visual_prompt: "Futuristic digital dashboard displaying exponential curve graphs",
-              narration: "Second, automate the pipeline to double your output with zero extra overhead.",
-              text_overlay: "Step 2: Automate ⚡",
-            },
-          ],
-        },
+      res.status(503).json({
+        error: "Gemini generation failed. Ensure GEMINI_API_KEY is configured and the model is available.",
       });
     }
   });
@@ -406,17 +402,9 @@ Return JSON with:
       const parsedData = JSON.parse(response.text || "{}");
       res.json({ success: true, result: parsedData });
     } catch (err: any) {
-      res.json({
-        success: true,
-        is_fallback: true,
-        result: {
-          hook_analysis: "The original hook lacks direct confrontation and immediate stakes.",
-          optimized_hooks: [
-            { hook_line: `If you still do this in 2026, you are wasting 5 hours every single day!`, trigger_type: "Urgency & Pain Point", predicted_vtr: 92.4 },
-            { hook_line: `Nobody is talking about this hidden trick, but it changes everything.`, trigger_type: "Curiosity Gap", predicted_vtr: 88.0 },
-            { hook_line: `Stop doing this immediately unless you want to get left behind.`, trigger_type: "FOMO", predicted_vtr: 86.5 },
-          ],
-        },
+      console.error("Gemini Hook Optimization Error:", err);
+      res.status(503).json({
+        error: "Gemini generation failed. Ensure GEMINI_API_KEY is configured and the model is available.",
       });
     }
   });

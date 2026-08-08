@@ -60,13 +60,13 @@ export const ScriptLabModal: React.FC<ScriptLabModalProps> = ({
       tags: generatedResult.tags || ['Shorts', 'AI'],
       pipeline_type: 'from_scratch',
       stage: 'scripting',
-      quality_score: generatedResult.estimated_quality_score || 90.0,
+      quality_score: generatedResult.estimated_quality_score || 0,
       quality_breakdown: {
-        hook_strength: 92,
-        narrative_coherence: 88,
-        visual_quality: 85,
-        audio_quality: 90,
-        seo_optimization: 88,
+        hook_strength: 0,
+        narrative_coherence: 0,
+        visual_quality: 0,
+        audio_quality: 0,
+        seo_optimization: 0,
       },
       duration_seconds: duration,
       hook_text: generatedResult.hook_text || topic,
@@ -78,12 +78,12 @@ export const ScriptLabModal: React.FC<ScriptLabModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
-      <div className="bg-white border border-slate-200 rounded-none max-w-2xl w-full p-6 space-y-5 shadow-2xl my-8">
+      <div className="bg-white border border-slate-200 rounded-lg max-w-2xl w-full p-6 space-y-5 shadow-2xl my-8">
         
         {/* Header */}
         <div className="flex items-center justify-between border-b border-slate-200 pb-3">
           <div className="flex items-center gap-2">
-            <div className="p-2 bg-indigo-50 text-indigo-700 rounded-none border border-indigo-200">
+            <div className="p-2 bg-indigo-50 text-indigo-700 rounded-lg border border-indigo-200">
               <Sparkles className="h-5 w-5" />
             </div>
             <div>
@@ -114,7 +114,7 @@ export const ScriptLabModal: React.FC<ScriptLabModalProps> = ({
               placeholder="e.g. 5 Secret iPhone Settings You Need to Turn Off Right Now"
               value={topic}
               onChange={(e) => setTopic(e.target.value)}
-              className="w-full bg-slate-50 border border-slate-200 rounded-none px-3 py-2 text-slate-900 focus:outline-none focus:border-indigo-600 text-xs font-medium"
+              className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-indigo-600 text-xs font-medium"
             />
           </div>
 
@@ -124,7 +124,7 @@ export const ScriptLabModal: React.FC<ScriptLabModalProps> = ({
               <select
                 value={selectedChannelId}
                 onChange={(e) => setSelectedChannelId(Number(e.target.value))}
-                className="w-full bg-slate-50 border border-slate-200 rounded-none px-3 py-2 text-slate-900 focus:outline-none focus:border-indigo-600 cursor-pointer text-xs font-medium"
+                className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-indigo-600 cursor-pointer text-xs font-medium"
               >
                 {channels.map((c) => (
                   <option key={c.id} value={c.id}>
@@ -140,7 +140,7 @@ export const ScriptLabModal: React.FC<ScriptLabModalProps> = ({
                 type="text"
                 value={targetTone}
                 onChange={(e) => setTargetTone(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-200 rounded-none px-3 py-2 text-slate-900 focus:outline-none focus:border-indigo-600 text-xs font-medium"
+                className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-indigo-600 text-xs font-medium"
               />
             </div>
 
@@ -152,7 +152,7 @@ export const ScriptLabModal: React.FC<ScriptLabModalProps> = ({
                 max={60}
                 value={duration}
                 onChange={(e) => setDuration(Number(e.target.value))}
-                className="w-full bg-slate-50 border border-slate-200 rounded-none px-3 py-2 text-slate-900 focus:outline-none focus:border-indigo-600 text-xs font-mono font-bold"
+                className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-indigo-600 text-xs font-mono font-bold"
               />
             </div>
           </div>
@@ -160,7 +160,7 @@ export const ScriptLabModal: React.FC<ScriptLabModalProps> = ({
           <button
             type="submit"
             disabled={isGenerating}
-            className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold uppercase tracking-wider text-[11px] rounded-none flex items-center justify-center gap-2 transition-colors cursor-pointer disabled:opacity-50 shadow-sm"
+            className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold uppercase tracking-wider text-[11px] rounded-lg flex items-center justify-center gap-2 transition-colors cursor-pointer disabled:opacity-50 shadow-sm"
           >
             {isGenerating ? (
               <>
@@ -178,22 +178,22 @@ export const ScriptLabModal: React.FC<ScriptLabModalProps> = ({
 
         {/* Generated Script Preview */}
         {generatedResult && (
-          <div className="bg-slate-50 border border-indigo-200 rounded-none p-4 space-y-3 text-xs">
+          <div className="bg-slate-50 border border-indigo-200 rounded-lg p-4 space-y-3 text-xs">
             <div className="flex items-center justify-between border-b border-slate-200 pb-2">
               <span className="font-bold text-slate-900 text-sm">{generatedResult.title}</span>
-              <span className="px-2 py-0.5 bg-emerald-50 border border-emerald-200 text-emerald-700 font-bold rounded-none font-mono text-[10px]">
+              <span className="px-2 py-0.5 bg-emerald-50 border border-emerald-200 text-emerald-700 font-bold rounded-lg font-mono text-[10px]">
                 Est Score: {generatedResult.estimated_quality_score}/100
               </span>
             </div>
 
-            <div className="p-2.5 bg-indigo-50/70 rounded-none border border-indigo-200 italic text-slate-900 font-bold">
+            <div className="p-2.5 bg-indigo-50/70 rounded-lg border border-indigo-200 italic text-slate-900 font-bold">
               Hook: "{generatedResult.hook_text}"
             </div>
 
             <div className="space-y-2 max-h-48 overflow-y-auto">
               <span className="font-bold uppercase tracking-wider text-[10px] text-slate-500">Scene Breakdown:</span>
               {generatedResult.script_scenes?.map((scene: any, idx: number) => (
-                <div key={idx} className="p-2 bg-white rounded-none border border-slate-200 space-y-1 text-[11px]">
+                <div key={idx} className="p-2 bg-white rounded-lg border border-slate-200 space-y-1 text-[11px]">
                   <div className="text-indigo-600 font-bold">Scene #{scene.scene_number} ({scene.timeframe})</div>
                   <div className="text-slate-900 font-semibold">Narration: {scene.narration}</div>
                   <div className="text-slate-500 text-[10px] font-medium">Visual AI Prompt: {scene.visual_prompt}</div>
@@ -205,7 +205,7 @@ export const ScriptLabModal: React.FC<ScriptLabModalProps> = ({
               <button
                 type="button"
                 onClick={handlePushToQueue}
-                className="w-full py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold uppercase tracking-wider text-[10px] rounded-none flex items-center justify-center gap-1.5 cursor-pointer transition-colors shadow-sm"
+                className="w-full py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold uppercase tracking-wider text-[10px] rounded-lg flex items-center justify-center gap-1.5 cursor-pointer transition-colors shadow-sm"
               >
                 <PlusCircle className="h-4 w-4" />
                 <span>Push Directly to Content Queue</span>

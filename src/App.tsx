@@ -18,23 +18,40 @@ import {
   AnalyticsOverview,
   VideoStage
 } from './types';
-import {
-  INITIAL_CHANNELS,
-  INITIAL_VIDEOS,
-  INITIAL_SYSTEM_HEALTH,
-  INITIAL_AI_MODELS,
-  INITIAL_DLQ_TASKS,
-  ANALYTICS_DATA
-} from './data/mockData';
+
+const EMPTY_HEALTH: SystemHealthData = {
+  cpu_pct: 0,
+  memory_pct: 0,
+  memory_used_gb: 0,
+  memory_total_gb: 0,
+  storage_pct: 0,
+  storage_used_gb: 0,
+  storage_total_gb: 0,
+  redis_queue_lag: 0,
+  active_workflows_running: 0,
+  circuit_breaker: 'CLOSED',
+  containers: [],
+};
+
+const EMPTY_ANALYTICS: AnalyticsOverview = {
+  total_channels: 0,
+  videos_published_this_week: 0,
+  avg_view_count: 0,
+  system_health_pct: 0,
+  weekly_views_data: [],
+  revenue_projections: [],
+  cost_breakdown: [],
+  vtr_distribution: [],
+};
 
 export default function App() {
   const [currentView, setCurrentView] = useState<DashboardView>('overview');
-  const [channels, setChannels] = useState<Channel[]>(INITIAL_CHANNELS);
-  const [videos, setVideos] = useState<VideoItem[]>(INITIAL_VIDEOS);
-  const [systemHealth, setSystemHealth] = useState<SystemHealthData>(INITIAL_SYSTEM_HEALTH);
-  const [models, setModels] = useState<AIModelConfig[]>(INITIAL_AI_MODELS);
-  const [dlqTasks, setDlqTasks] = useState<DLQTask[]>(INITIAL_DLQ_TASKS);
-  const [analytics, setAnalytics] = useState<AnalyticsOverview>(ANALYTICS_DATA);
+  const [channels, setChannels] = useState<Channel[]>([]);
+  const [videos, setVideos] = useState<VideoItem[]>([]);
+  const [systemHealth, setSystemHealth] = useState<SystemHealthData>(EMPTY_HEALTH);
+  const [models, setModels] = useState<AIModelConfig[]>([]);
+  const [dlqTasks, setDlqTasks] = useState<DLQTask[]>([]);
+  const [analytics, setAnalytics] = useState<AnalyticsOverview>(EMPTY_ANALYTICS);
 
   const [selectedChannelFilter, setSelectedChannelFilter] = useState<number | 'all'>('all');
   const [selectedVideoModal, setSelectedVideoModal] = useState<VideoItem | null>(null);
@@ -68,7 +85,7 @@ export default function App() {
         if (modRes.ok) setModels(await modRes.json());
         if (anaRes.ok) setAnalytics(await anaRes.json());
       } catch (err) {
-        console.warn('Backend load fallback to static mock:', err);
+        console.warn('Backend load failed:', err);
       }
     };
 
@@ -97,10 +114,9 @@ export default function App() {
       const data = await res.json();
       if (data.success && data.video) {
         setVideos((prev) => prev.map((v) => (v.id === id ? data.video : v)));
-        showToast(`Video #${id} approved! Queued in n8n Publisher WF-10.`);
+        showToast(`Video #${id} approved and queued for publication.`);
       }
     } catch (e) {
-      // Local fallback
       setVideos((prev) =>
         prev.map((v) =>
           v.id === id
@@ -124,7 +140,6 @@ export default function App() {
       if (data.success && data.video) {
         setVideos((prev) => prev.map((v) => (v.id === id ? data.video : v)));
         showToast(data.message || `Rejection logged for #${id}.`);
-        // Refresh DLQ
         const dlqRes = await fetch('/api/system/dlq');
         if (dlqRes.ok) setDlqTasks(await dlqRes.json());
       }
@@ -171,9 +186,11 @@ export default function App() {
       if (data.success && data.video) {
         setVideos((prev) => [data.video, ...prev]);
         showToast(data.message);
+      } else if (data.error) {
+        showToast(data.error);
       }
     } catch (e) {
-      showToast('n8n Daily Planner WF-01 triggered!');
+      showToast('Could not reach the n8n planner.');
     } finally {
       setIsTriggeringPlanner(false);
     }
@@ -193,26 +210,7 @@ export default function App() {
         showToast(`Channel "${data.channel.name}" provisioned successfully!`);
       }
     } catch (e) {
-      const newCh: Channel = {
-        id: Date.now(),
-        name: channelData.name || 'New Channel',
-        niche: channelData.niche || 'Technology',
-        target_audience: channelData.target_audience || 'General Audience',
-        language: 'en',
-        ai_model_config_id: channelData.ai_model_config_id || 'gemini-3.6-flash',
-        schedule_cron: channelData.schedule_cron || '0 9,18 * * *',
-        max_daily_uploads: channelData.max_daily_uploads || 2,
-        youtube_channel_id: `UC_${Date.now()}`,
-        status: 'active',
-        subscribers: 0,
-        total_views: 0,
-        avg_vtr: 65.0,
-        created_at: new Date().toISOString().split('T')[0],
-        daily_budget_usd: channelData.daily_budget_usd || 1.5,
-        current_daily_spend_usd: 0.0,
-      };
-      setChannels((prev) => [newCh, ...prev]);
-      showToast(`Channel "${newCh.name}" added.`);
+      showToast('Failed to add channel.');
     }
   };
 
@@ -282,29 +280,7 @@ export default function App() {
         showToast(`Short "${data.video.title}" pushed into Content Queue!`);
       }
     } catch (e) {
-      const localVid: VideoItem = {
-        id: Date.now(),
-        channel_id: payload.channel_id || 1,
-        channel_name: channels.find((c) => c.id === payload.channel_id)?.name || 'TechPulse Shorts',
-        content_task_id: Math.floor(Math.random() * 900) + 100,
-        title: payload.title,
-        description: payload.description,
-        tags: payload.tags,
-        pipeline_type: 'from_scratch',
-        status: 'draft',
-        stage: 'scripting',
-        quality_score: payload.quality_score || 90.0,
-        quality_breakdown: payload.quality_breakdown,
-        duration_seconds: payload.duration_seconds,
-        storage_path: `/minio/videos/lab_${Date.now()}.mp4`,
-        thumbnail_path: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=600&auto=format&fit=crop&q=80',
-        hook_text: payload.hook_text,
-        voiceover_tone: payload.voiceover_tone,
-        created_at: new Date().toISOString().replace('T', ' ').substring(0, 19),
-        script_scenes: payload.script_scenes,
-      };
-      setVideos((prev) => [localVid, ...prev]);
-      showToast(`Generated Short pushed to Queue.`);
+      showToast('Failed to push generated short into the queue.');
     }
   };
 
@@ -314,11 +290,11 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 font-sans flex flex-col selection:bg-indigo-600 selection:text-white">
-      
+
       {/* Toast Notification Banner */}
       {toastMessage && (
-        <div className="fixed bottom-5 right-5 z-50 bg-indigo-600 text-white px-5 py-3 rounded-none shadow-xl border border-indigo-500 font-semibold text-xs flex items-center gap-2 uppercase tracking-wider">
-          <span>⚡</span>
+        <div className="fixed bottom-5 right-5 z-50 bg-slate-900 text-white px-4 py-3 rounded-lg shadow-xl border border-slate-700 font-medium text-sm flex items-center gap-2">
+          <span className="h-2 w-2 rounded-full bg-indigo-400"></span>
           <span>{toastMessage}</span>
         </div>
       )}
@@ -337,7 +313,7 @@ export default function App() {
 
       {/* Main Body Layout */}
       <div className="flex-1 flex flex-col md:flex-row">
-        
+
         {/* Sidebar */}
         <Sidebar
           currentView={currentView}
@@ -348,7 +324,7 @@ export default function App() {
 
         {/* Content View Container */}
         <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full space-y-6">
-          
+
           {currentView === 'overview' && (
             <OverviewView
               channels={channels}
@@ -399,14 +375,14 @@ export default function App() {
 
           {currentView === 'script_lab' && (
             <div className="space-y-4">
-              <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 text-center space-y-3">
-                <h2 className="text-lg font-bold text-white">AI Scripting & Prompt Engineering Lab</h2>
-                <p className="text-xs text-slate-400 max-w-lg mx-auto">
-                  Test Gemini 3.6 Flash / Pro script generation, viral hook scoring, and push production payloads directly into the n8n pipeline.
+              <div className="bg-white border border-slate-200 rounded-xl p-6 text-center space-y-3 shadow-sm">
+                <h2 className="text-lg font-bold text-slate-900">AI Scripting & Prompt Engineering Lab</h2>
+                <p className="text-sm text-slate-500 max-w-lg mx-auto">
+                  Test Gemini script generation, viral hook scoring, and push production payloads directly into the n8n pipeline.
                 </p>
                 <button
                   onClick={() => setShowScriptLabModal(true)}
-                  className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold text-xs shadow cursor-pointer"
+                  className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-bold text-sm shadow cursor-pointer"
                 >
                   Launch Interactive AI Script Generator
                 </button>

@@ -16,6 +16,7 @@ import {
   RefreshCw,
   Layers
 } from 'lucide-react';
+import { Thumbnail } from './Thumbnail';
 
 interface VideoDetailModalProps {
   video: VideoItem;
@@ -63,19 +64,19 @@ export const VideoDetailModal: React.FC<VideoDetailModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
-      <div className="bg-white border border-slate-200 rounded-none max-w-3xl w-full p-6 space-y-5 shadow-2xl my-8">
+      <div className="bg-white border border-slate-200 rounded-lg max-w-3xl w-full p-6 space-y-5 shadow-2xl my-8">
         
         {/* Modal Header */}
         <div className="flex items-start justify-between border-b border-slate-200 pb-4">
           <div className="flex items-center gap-3">
-            <img
+            <Thumbnail
               src={video.thumbnail_path}
               alt={video.title}
-              className="h-14 w-10 object-cover rounded-none border border-slate-200 shrink-0"
+              className="h-14 w-10 rounded-md"
             />
             <div>
               <div className="flex items-center gap-2">
-                <span className="px-2 py-0.5 rounded-none text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 uppercase tracking-wider">
+                <span className="px-2 py-0.5 rounded-lg text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 uppercase tracking-wider">
                   {video.channel_name}
                 </span>
                 <span className="text-xs text-slate-500 font-semibold uppercase">{video.pipeline_type.replace('_', ' ')}</span>
@@ -97,7 +98,7 @@ export const VideoDetailModal: React.FC<VideoDetailModalProps> = ({
           <div className="flex items-center gap-1 text-xs">
             <button
               onClick={() => setActiveTab('script')}
-              className={`px-3 py-1.5 rounded-none text-xs font-bold uppercase tracking-wider cursor-pointer transition-colors ${
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider cursor-pointer transition-colors ${
                 activeTab === 'script' ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600 hover:text-slate-900'
               }`}
             >
@@ -105,7 +106,7 @@ export const VideoDetailModal: React.FC<VideoDetailModalProps> = ({
             </button>
             <button
               onClick={() => setActiveTab('quality')}
-              className={`px-3 py-1.5 rounded-none text-xs font-bold uppercase tracking-wider cursor-pointer transition-colors ${
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider cursor-pointer transition-colors ${
                 activeTab === 'quality' ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600 hover:text-slate-900'
               }`}
             >
@@ -116,7 +117,7 @@ export const VideoDetailModal: React.FC<VideoDetailModalProps> = ({
                 setActiveTab('hook_ai');
                 if (!optimizedHooks) handleOptimizeHook();
               }}
-              className={`px-3 py-1.5 rounded-none text-xs font-bold uppercase tracking-wider cursor-pointer transition-colors flex items-center gap-1.5 ${
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider cursor-pointer transition-colors flex items-center gap-1.5 ${
                 activeTab === 'hook_ai' ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600 hover:text-slate-900'
               }`}
             >
@@ -134,7 +135,7 @@ export const VideoDetailModal: React.FC<VideoDetailModalProps> = ({
         {activeTab === 'script' && (
           <div className="space-y-4 max-h-[350px] overflow-y-auto pr-1">
             {/* Hook Highlight */}
-            <div className="bg-indigo-50/50 p-3 rounded-none border border-indigo-200 space-y-1">
+            <div className="bg-indigo-50/50 p-3 rounded-lg border border-indigo-200 space-y-1">
               <span className="text-[10px] font-bold text-indigo-700 uppercase tracking-wider">
                 First 3-Second Opening Hook
               </span>
@@ -146,26 +147,26 @@ export const VideoDetailModal: React.FC<VideoDetailModalProps> = ({
             {/* Scenes */}
             <div className="space-y-3">
               {video.script_scenes?.map((scene) => (
-                <div key={scene.scene_number} className="bg-slate-50 border border-slate-200 p-3 rounded-none space-y-2 text-xs">
+                <div key={scene.scene_number} className="bg-slate-50 border border-slate-200 p-3 rounded-lg space-y-2 text-xs">
                   <div className="flex items-center justify-between text-[11px] font-bold text-slate-500">
                     <span className="text-indigo-600 font-bold">Scene #{scene.scene_number}</span>
                     <span className="font-mono text-slate-600">{scene.timeframe}</span>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-[11px]">
-                    <div className="bg-white p-2 rounded-none border border-slate-200">
+                    <div className="bg-white p-2 rounded-lg border border-slate-200">
                       <span className="text-slate-400 font-bold block text-[10px] uppercase">Visual AI Prompt:</span>
                       <p className="text-slate-700 font-medium">{scene.visual_prompt}</p>
                     </div>
 
-                    <div className="bg-white p-2 rounded-none border border-slate-200">
+                    <div className="bg-white p-2 rounded-lg border border-slate-200">
                       <span className="text-slate-400 font-bold block text-[10px] uppercase">Narration (TTS):</span>
                       <p className="text-slate-900 font-semibold">{scene.narration}</p>
                     </div>
                   </div>
 
                   {scene.text_overlay && (
-                    <div className="text-[10px] text-amber-800 font-mono bg-amber-50 p-1.5 rounded-none border border-amber-200">
+                    <div className="text-[10px] text-amber-800 font-mono bg-amber-50 p-1.5 rounded-lg border border-amber-200">
                       Caption Overlay: <strong>{scene.text_overlay}</strong>
                     </div>
                   )}
@@ -179,43 +180,43 @@ export const VideoDetailModal: React.FC<VideoDetailModalProps> = ({
         {activeTab === 'quality' && (
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-3 text-xs">
-              <div className="p-3 bg-slate-50 rounded-none border border-slate-200 space-y-1">
+              <div className="p-3 bg-slate-50 rounded-lg border border-slate-200 space-y-1">
                 <span className="text-slate-500 font-bold uppercase text-[10px]">Hook Strength (30% Weight)</span>
                 <div className="text-lg font-bold text-emerald-600 font-mono">
                   {video.quality_breakdown.hook_strength} / 100
                 </div>
-                <div className="w-full bg-slate-200 rounded-none h-1.5 overflow-hidden">
-                  <div className="bg-emerald-600 h-1.5 rounded-none" style={{ width: `${video.quality_breakdown.hook_strength}%` }}></div>
+                <div className="w-full bg-slate-200 rounded-lg h-1.5 overflow-hidden">
+                  <div className="bg-emerald-600 h-1.5 rounded-lg" style={{ width: `${video.quality_breakdown.hook_strength}%` }}></div>
                 </div>
               </div>
 
-              <div className="p-3 bg-slate-50 rounded-none border border-slate-200 space-y-1">
+              <div className="p-3 bg-slate-50 rounded-lg border border-slate-200 space-y-1">
                 <span className="text-slate-500 font-bold uppercase text-[10px]">Narrative Coherence (25% Weight)</span>
                 <div className="text-lg font-bold text-indigo-600 font-mono">
                   {video.quality_breakdown.narrative_coherence} / 100
                 </div>
-                <div className="w-full bg-slate-200 rounded-none h-1.5 overflow-hidden">
-                  <div className="bg-indigo-600 h-1.5 rounded-none" style={{ width: `${video.quality_breakdown.narrative_coherence}%` }}></div>
+                <div className="w-full bg-slate-200 rounded-lg h-1.5 overflow-hidden">
+                  <div className="bg-indigo-600 h-1.5 rounded-lg" style={{ width: `${video.quality_breakdown.narrative_coherence}%` }}></div>
                 </div>
               </div>
 
-              <div className="p-3 bg-slate-50 rounded-none border border-slate-200 space-y-1">
+              <div className="p-3 bg-slate-50 rounded-lg border border-slate-200 space-y-1">
                 <span className="text-slate-500 font-bold uppercase text-[10px]">Visual Quality (20% Weight)</span>
                 <div className="text-lg font-bold text-blue-600 font-mono">
                   {video.quality_breakdown.visual_quality} / 100
                 </div>
-                <div className="w-full bg-slate-200 rounded-none h-1.5 overflow-hidden">
-                  <div className="bg-blue-600 h-1.5 rounded-none" style={{ width: `${video.quality_breakdown.visual_quality}%` }}></div>
+                <div className="w-full bg-slate-200 rounded-lg h-1.5 overflow-hidden">
+                  <div className="bg-blue-600 h-1.5 rounded-lg" style={{ width: `${video.quality_breakdown.visual_quality}%` }}></div>
                 </div>
               </div>
 
-              <div className="p-3 bg-slate-50 rounded-none border border-slate-200 space-y-1">
+              <div className="p-3 bg-slate-50 rounded-lg border border-slate-200 space-y-1">
                 <span className="text-slate-500 font-bold uppercase text-[10px]">Audio & SEO (25% Combined)</span>
                 <div className="text-lg font-bold text-purple-600 font-mono">
                   {video.quality_breakdown.audio_quality} / 100
                 </div>
-                <div className="w-full bg-slate-200 rounded-none h-1.5 overflow-hidden">
-                  <div className="bg-purple-600 h-1.5 rounded-none" style={{ width: `${video.quality_breakdown.audio_quality}%` }}></div>
+                <div className="w-full bg-slate-200 rounded-lg h-1.5 overflow-hidden">
+                  <div className="bg-purple-600 h-1.5 rounded-lg" style={{ width: `${video.quality_breakdown.audio_quality}%` }}></div>
                 </div>
               </div>
             </div>
@@ -225,7 +226,7 @@ export const VideoDetailModal: React.FC<VideoDetailModalProps> = ({
         {/* TAB 3: AI HOOK OPTIMIZER (Server Gemini Integration) */}
         {activeTab === 'hook_ai' && (
           <div className="space-y-4 text-xs">
-            <div className="bg-indigo-50 border border-indigo-200 p-3 rounded-none text-slate-700">
+            <div className="bg-indigo-50 border border-indigo-200 p-3 rounded-lg text-slate-700">
               <span className="font-bold block text-sm text-indigo-900 mb-1">Gemini AI Hook Rewrite Engine</span>
               <span>Re-engineers opening hook line using psychological trigger formulas to exceed 85% VTR.</span>
             </div>
@@ -241,7 +242,7 @@ export const VideoDetailModal: React.FC<VideoDetailModalProps> = ({
               <div className="space-y-2">
                 <div className="font-bold text-slate-900 uppercase text-[10px] tracking-wider">Generated Alternative Hooks:</div>
                 {optimizedHooks.map((h, i) => (
-                  <div key={i} className="p-3 bg-slate-50 border border-slate-200 rounded-none space-y-1">
+                  <div key={i} className="p-3 bg-slate-50 border border-slate-200 rounded-lg space-y-1">
                     <div className="flex items-center justify-between text-[11px]">
                       <span className="font-bold text-amber-700">{h.trigger_type}</span>
                       <span className="text-emerald-700 font-mono font-bold">Predicted VTR: {h.predicted_vtr}%</span>
@@ -263,7 +264,7 @@ export const VideoDetailModal: React.FC<VideoDetailModalProps> = ({
           <div className="flex items-center gap-2">
             <button
               onClick={() => setShowRejectForm(!showRejectForm)}
-              className="px-3 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-none font-bold uppercase tracking-wider text-[10px] transition-colors cursor-pointer"
+              className="px-3 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-lg font-bold uppercase tracking-wider text-[10px] transition-colors cursor-pointer"
             >
               Reject & Regenerate
             </button>
@@ -273,7 +274,7 @@ export const VideoDetailModal: React.FC<VideoDetailModalProps> = ({
                 onApprove(video.id);
                 onClose();
               }}
-              className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-none font-bold uppercase tracking-wider text-[10px] shadow flex items-center gap-1.5 transition-colors cursor-pointer"
+              className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold uppercase tracking-wider text-[10px] shadow flex items-center gap-1.5 transition-colors cursor-pointer"
             >
               <CheckCircle2 className="h-4 w-4" />
               <span>Approve for YouTube Publish</span>
@@ -283,13 +284,13 @@ export const VideoDetailModal: React.FC<VideoDetailModalProps> = ({
 
         {/* Reject Form Dropdown */}
         {showRejectForm && (
-          <div className="bg-slate-50 border border-rose-200 p-3 rounded-none space-y-2 text-xs">
+          <div className="bg-slate-50 border border-rose-200 p-3 rounded-lg space-y-2 text-xs">
             <span className="font-bold text-rose-700 uppercase text-[10px]">Targeted Regeneration Options:</span>
             <div className="flex items-center gap-2">
               <select
                 value={rejectComponent}
                 onChange={(e) => setRejectComponent(e.target.value)}
-                className="bg-white border border-slate-200 text-slate-800 px-3 py-1.5 rounded-none focus:outline-none cursor-pointer text-xs font-semibold"
+                className="bg-white border border-slate-200 text-slate-800 px-3 py-1.5 rounded-lg focus:outline-none cursor-pointer text-xs font-semibold"
               >
                 <option value="Hook">Opening Hook (First 3s)</option>
                 <option value="Voiceover">Voiceover TTS Audio</option>
@@ -302,7 +303,7 @@ export const VideoDetailModal: React.FC<VideoDetailModalProps> = ({
                 placeholder="Reason for rejection..."
                 value={rejectReason}
                 onChange={(e) => setRejectReason(e.target.value)}
-                className="flex-1 bg-white border border-slate-200 text-slate-900 px-3 py-1.5 rounded-none focus:outline-none text-xs"
+                className="flex-1 bg-white border border-slate-200 text-slate-900 px-3 py-1.5 rounded-lg focus:outline-none text-xs"
               />
 
               <button
@@ -310,7 +311,7 @@ export const VideoDetailModal: React.FC<VideoDetailModalProps> = ({
                   onReject(video.id, rejectReason, rejectComponent);
                   onClose();
                 }}
-                className="px-3 py-1.5 bg-rose-600 text-white rounded-none font-bold uppercase text-[10px] tracking-wider cursor-pointer"
+                className="px-3 py-1.5 bg-rose-600 text-white rounded-lg font-bold uppercase text-[10px] tracking-wider cursor-pointer"
               >
                 Submit Rejection
               </button>

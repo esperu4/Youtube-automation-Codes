@@ -15,6 +15,7 @@ import {
   ChevronLeft
 } from 'lucide-react';
 import { VideoItem, VideoStage, QualityBreakdown } from '../types';
+import { Thumbnail } from './Thumbnail';
 
 interface ContentQueueViewProps {
   videos: VideoItem[];
@@ -59,7 +60,7 @@ export const ContentQueueView: React.FC<ContentQueueViewProps> = ({
     <div className="space-y-4">
       
       {/* Header Controls */}
-      <div className="bg-white border border-slate-200 rounded-none p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-sm">
+      <div className="bg-white border border-slate-200 rounded-lg p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-sm">
         <div>
           <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
             <Kanban className="h-4 w-4 text-indigo-600" />
@@ -79,14 +80,14 @@ export const ContentQueueView: React.FC<ContentQueueViewProps> = ({
             placeholder="Search shorts title..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="bg-slate-50 border border-slate-200 text-slate-800 px-3 py-1.5 rounded-none focus:outline-none focus:border-indigo-600 w-40 sm:w-48 text-xs font-medium"
+            className="bg-slate-50 border border-slate-200 text-slate-800 px-3 py-1.5 rounded-lg focus:outline-none focus:border-indigo-600 w-40 sm:w-48 text-xs font-medium"
           />
 
           {/* Pipeline Filter */}
           <select
             value={filterPipeline}
             onChange={(e) => setFilterPipeline(e.target.value)}
-            className="bg-slate-50 border border-slate-200 text-slate-800 px-3 py-1.5 rounded-none focus:outline-none focus:border-indigo-600 text-xs font-semibold cursor-pointer"
+            className="bg-slate-50 border border-slate-200 text-slate-800 px-3 py-1.5 rounded-lg focus:outline-none focus:border-indigo-600 text-xs font-semibold cursor-pointer"
           >
             <option value="all">All Pipelines</option>
             <option value="from_scratch">From Scratch</option>
@@ -97,7 +98,7 @@ export const ContentQueueView: React.FC<ContentQueueViewProps> = ({
           <select
             value={filterStatus}
             onChange={(e) => setFilterStatus(e.target.value)}
-            className="bg-slate-50 border border-slate-200 text-slate-800 px-3 py-1.5 rounded-none focus:outline-none focus:border-indigo-600 text-xs font-semibold cursor-pointer"
+            className="bg-slate-50 border border-slate-200 text-slate-800 px-3 py-1.5 rounded-lg focus:outline-none focus:border-indigo-600 text-xs font-semibold cursor-pointer"
           >
             <option value="all">All Statuses</option>
             <option value="draft">Draft</option>
@@ -108,10 +109,10 @@ export const ContentQueueView: React.FC<ContentQueueViewProps> = ({
           </select>
 
           {/* View Mode Switcher */}
-          <div className="flex items-center bg-slate-100 border border-slate-200 rounded-none p-0.5">
+          <div className="flex items-center bg-slate-100 border border-slate-200 rounded-lg p-0.5">
             <button
               onClick={() => setViewMode('kanban')}
-              className={`px-2.5 py-1 rounded-none text-xs font-bold transition-colors cursor-pointer ${
+              className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-colors cursor-pointer ${
                 viewMode === 'kanban' ? 'bg-indigo-600 text-white' : 'text-slate-600 hover:text-slate-900'
               }`}
             >
@@ -119,7 +120,7 @@ export const ContentQueueView: React.FC<ContentQueueViewProps> = ({
             </button>
             <button
               onClick={() => setViewMode('list')}
-              className={`px-2.5 py-1 rounded-none text-xs font-bold transition-colors cursor-pointer ${
+              className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-colors cursor-pointer ${
                 viewMode === 'list' ? 'bg-indigo-600 text-white' : 'text-slate-600 hover:text-slate-900'
               }`}
             >
@@ -129,7 +130,7 @@ export const ContentQueueView: React.FC<ContentQueueViewProps> = ({
 
           <button
             onClick={onOpenScriptLab}
-            className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-none font-bold uppercase tracking-wider text-[11px] flex items-center gap-1 cursor-pointer transition-colors"
+            className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-bold uppercase tracking-wider text-[11px] flex items-center gap-1 cursor-pointer transition-colors"
           >
             <Zap className="h-3.5 w-3.5 text-amber-300 fill-amber-300" />
             <span>+ AI Short</span>
@@ -146,12 +147,12 @@ export const ContentQueueView: React.FC<ContentQueueViewProps> = ({
               return (
                 <div
                   key={stage.id}
-                  className="flex-1 rounded-none border border-slate-200 bg-slate-50 p-3 flex flex-col space-y-3 min-h-[500px] border-t-2 border-t-indigo-600"
+                  className="flex-1 rounded-lg border border-slate-200 bg-slate-50 p-3 flex flex-col space-y-3 min-h-[500px] border-t-2 border-t-indigo-600"
                 >
                   {/* Column Header */}
                   <div className="flex items-center justify-between border-b border-slate-200 pb-2">
                     <span className="font-bold text-xs text-slate-800 uppercase tracking-wider">{stage.title}</span>
-                    <span className="px-2 py-0.5 text-[10px] bg-white border border-slate-200 rounded-none text-slate-700 font-mono font-bold">
+                    <span className="px-2 py-0.5 text-[10px] bg-white border border-slate-200 rounded-lg text-slate-700 font-mono font-bold">
                       {stageVideos.length}
                     </span>
                   </div>
@@ -161,14 +162,14 @@ export const ContentQueueView: React.FC<ContentQueueViewProps> = ({
                     {stageVideos.map((video) => (
                       <div
                         key={video.id}
-                        className="bg-white border border-slate-200 rounded-none p-3 hover:border-indigo-600 transition-colors shadow-sm space-y-2 group"
+                        className="bg-white border border-slate-200 rounded-lg p-3 hover:border-indigo-600 transition-colors shadow-sm space-y-2 group"
                       >
                         {/* Thumbnail & Title */}
                         <div className="flex items-start gap-2.5">
-                          <img
+                          <Thumbnail
                             src={video.thumbnail_path}
                             alt={video.title}
-                            className="h-14 w-10 object-cover rounded-none border border-slate-200 shrink-0"
+                            className="h-14 w-10 rounded-md"
                           />
                           <div className="flex-1 min-w-0">
                             <h4
@@ -186,14 +187,14 @@ export const ContentQueueView: React.FC<ContentQueueViewProps> = ({
                         </div>
 
                         {/* Hook Excerpt */}
-                        <div className="bg-slate-50 p-2 rounded-none border border-slate-200 text-[11px] text-slate-600 italic line-clamp-2">
+                        <div className="bg-slate-50 p-2 rounded-lg border border-slate-200 text-[11px] text-slate-600 italic line-clamp-2">
                           "{video.hook_text}"
                         </div>
 
                         {/* Badges & Scores */}
                         <div className="flex items-center justify-between text-[10px] pt-1">
                           <span
-                            className={`px-1.5 py-0.5 rounded-none font-bold uppercase tracking-wider border ${
+                            className={`px-1.5 py-0.5 rounded-lg font-bold uppercase tracking-wider border ${
                               video.pipeline_type === 'from_scratch'
                                 ? 'bg-indigo-50 text-indigo-700 border-indigo-200'
                                 : 'bg-cyan-50 text-cyan-700 border-cyan-200'
@@ -222,7 +223,7 @@ export const ContentQueueView: React.FC<ContentQueueViewProps> = ({
                         <div className="pt-2 border-t border-slate-200 flex items-center justify-between gap-1 text-[10px]">
                           <button
                             onClick={() => onSelectVideo(video)}
-                            className="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-none font-bold uppercase tracking-wider cursor-pointer transition-colors"
+                            className="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg font-bold uppercase tracking-wider cursor-pointer transition-colors"
                           >
                             Inspect
                           </button>
@@ -231,7 +232,7 @@ export const ContentQueueView: React.FC<ContentQueueViewProps> = ({
                             {stage.id === 'quality_check' && (
                               <button
                                 onClick={() => onApproveVideo(video.id)}
-                                className="px-2 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-none font-bold uppercase tracking-wider cursor-pointer transition-colors"
+                                className="px-2 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold uppercase tracking-wider cursor-pointer transition-colors"
                                 title="Approve for publication"
                               >
                                 Approve
@@ -247,7 +248,7 @@ export const ContentQueueView: React.FC<ContentQueueViewProps> = ({
                                     onMoveStage(video.id, STAGES[stageIdx + 1].id);
                                   }
                                 }}
-                                className="px-1.5 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded-none cursor-pointer transition-colors"
+                                className="px-1.5 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg cursor-pointer transition-colors"
                                 title="Advance to next stage"
                               >
                                 <ChevronRight className="h-3 w-3" />
@@ -260,7 +261,7 @@ export const ContentQueueView: React.FC<ContentQueueViewProps> = ({
                     ))}
 
                     {stageVideos.length === 0 && (
-                      <div className="h-32 border border-dashed border-slate-300 rounded-none flex items-center justify-center text-slate-400 text-xs font-semibold">
+                      <div className="h-32 border border-dashed border-slate-300 rounded-lg flex items-center justify-center text-slate-400 text-xs font-semibold">
                         No tasks in stage
                       </div>
                     )}
@@ -273,7 +274,16 @@ export const ContentQueueView: React.FC<ContentQueueViewProps> = ({
         </div>
       ) : (
         /* LIST VIEW */
-        <div className="bg-white border border-slate-200 rounded-none p-4 shadow-sm overflow-x-auto">
+        <div className="bg-white border border-slate-200 rounded-lg p-4 shadow-sm overflow-x-auto">
+          {filteredVideos.length === 0 ? (
+            <div className="py-12 text-center">
+              <List className="h-10 w-10 text-slate-200 mx-auto mb-3" />
+              <p className="text-sm font-semibold text-slate-600">No videos match your filters</p>
+              <p className="text-sm text-slate-400 mt-1">
+                Try clearing the search or selecting a different channel.
+              </p>
+            </div>
+          ) : (
           <table className="w-full text-left text-xs text-slate-700">
             <thead className="text-[10px] uppercase tracking-widest font-bold bg-slate-50 text-slate-500 border-b border-slate-200">
               <tr>
@@ -290,17 +300,17 @@ export const ContentQueueView: React.FC<ContentQueueViewProps> = ({
               {filteredVideos.map((video) => (
                 <tr key={video.id} className="hover:bg-slate-50 transition-colors">
                   <td className="py-3 px-3">
-                    <div className="flex items-center gap-3">
-                      <img
-                        src={video.thumbnail_path}
-                        alt={video.title}
-                        className="h-10 w-8 rounded-none object-cover shrink-0 border border-slate-200"
-                      />
-                      <div>
-                        <div
-                          onClick={() => onSelectVideo(video)}
-                          className="font-bold text-slate-900 hover:text-indigo-600 cursor-pointer line-clamp-1"
-                        >
+<div className="flex items-center gap-3">
+                        <Thumbnail
+                          src={video.thumbnail_path}
+                          alt={video.title}
+                          className="h-10 w-8 rounded-md"
+                        />
+                        <div>
+                          <div
+                            onClick={() => onSelectVideo(video)}
+                            className="font-bold text-slate-900 hover:text-indigo-600 cursor-pointer line-clamp-1"
+                          >
                           {video.title}
                         </div>
                         <div className="text-[11px] text-slate-500 italic line-clamp-1">
@@ -326,7 +336,7 @@ export const ContentQueueView: React.FC<ContentQueueViewProps> = ({
 
                   <td className="py-3 px-3">
                     <span
-                      className={`px-2 py-0.5 rounded-none text-[10px] font-bold uppercase tracking-wider ${
+                      className={`px-2 py-0.5 rounded-lg text-[10px] font-bold uppercase tracking-wider ${
                         video.status === 'published'
                           ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                           : video.status === 'approved'
@@ -350,14 +360,14 @@ export const ContentQueueView: React.FC<ContentQueueViewProps> = ({
                     <div className="flex items-center justify-end gap-1.5">
                       <button
                         onClick={() => onSelectVideo(video)}
-                        className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 rounded-none text-[10px] font-bold uppercase tracking-wider cursor-pointer"
+                        className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 rounded-lg text-[10px] font-bold uppercase tracking-wider cursor-pointer"
                       >
                         Inspect
                       </button>
                       {video.status === 'review' && (
                         <button
                           onClick={() => onApproveVideo(video.id)}
-                          className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-none text-[10px] font-bold uppercase tracking-wider cursor-pointer"
+                          className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-[10px] font-bold uppercase tracking-wider cursor-pointer"
                         >
                           Approve
                         </button>
@@ -368,6 +378,7 @@ export const ContentQueueView: React.FC<ContentQueueViewProps> = ({
               ))}
             </tbody>
           </table>
+          )}
         </div>
       )}
 
