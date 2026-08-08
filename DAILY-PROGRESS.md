@@ -17,11 +17,16 @@ Each entry records: date, what was done, what was verified, blockers, and next s
   - Wired the missing Webhook → chain connection (multi-trigger footgun fix).
   - Qualitity gate **≥80 → publish**, failures **→ WF-15 DLQ**.
   - WF-06, WF-07, WF-09, WF-11..WF-14 are placeholder (**[PLANNED]**) no-op stages.
-  - **15 colored sticky notes** (blue=ideation, purple=assets, teal=compose, green=publish, orange=extras, red=DLQ) each labeling a workflow — currently stacked at one corner; layout polish pending.
+  - **15 colored sticky notes** (blue=ideation, purple=assets, teal=compose, green=publish, orange=extras, red=DLQ) each labeling a workflow with a brief job description, positioned above its own cluster on the canvas.
 
 ### What was updated
 - Combined the previously fragmented workflows into one orchestrator view (standalone WF-01..WF-05/08/10/15 remain live & untouched).
 - `README.md` "Where We Are Now" verified against the actual instance state.
+- **Sticky-note enrichment pass** on the orchestrator (`update_workflow`, 30 ops applied):
+  - Every sticky now carries a 1–2 sentence **brief of the workflow's job** (not just a title).
+  - WF-01 / WF-02 colored **blue** (ideation) — previously default.
+  - All 15 stickies moved off the stacked `[-96,-16]` corner to sit above their own pipeline cluster (blue/purple lane at y=-150, green/orange publishing lane at y=-320).
+  - Note: per-node background `color` is not settable via SDK/API (dropped by both REST and nodeGroups) — sticky notes are the n8n-native way to color-segment a canvas.
 
 ### Verified live tests ✅
 - Orchestrator full pinned data prepared (webhook + Gemini + TTS + ComfyUI + FFmpeg + YouTube + DLQ). Execution attempt was **blocked at pre-execution credential check** — no creds on instance.
@@ -30,12 +35,11 @@ Each entry records: date, what was done, what was verified, blockers, and next s
 1. n8n instance has **0 credentials** (`list_credentials` → 0).
    - WF-02, WF-08 + **orchestrator's two Gemini nodes** need a **Google Gemini API** credential.
    - WF-10 + orchestrator's YouTube node need a **YouTube OAuth2** credential.
-   - Until created in the n8n UI, these workflows/nodes cannot run or be published (pre-execution check rejects them).
-2. Sticky note positioning on orchestrator canvas not yet polished.
+    - Until created in the n8n UI, these workflows/nodes cannot run or be published (pre-execution check rejects them).
+2. Per-node canvas `color` (background coloring of individual nodes) is **not** exposed by the SDK or public API — visual segmentation is done via colored sticky notes instead.
 
 ### Next steps
 1. Create **Google Gemini API** credential in n8n UI → unblocks WF-02/WF-08/orchestrator Gemini nodes.
 2. Create **YouTube OAuth2** credential → unblocks WF-10 + orchestrator YouTube node.
 3. Publish the orchestrator + remaining workflows.
-4. Polish orchestrator sticky-note layout.
 5. Dashboard (`server.ts`) → real n8n webhook wiring.
