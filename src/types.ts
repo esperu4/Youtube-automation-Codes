@@ -144,3 +144,40 @@ export interface AnalyticsOverview {
   cost_breakdown: CostBreakdownItem[];
   vtr_distribution: { range: string; count: number }[];
 }
+
+export type CredentialKind = 'api_key' | 'oauth2';
+
+export interface CredentialRequirement {
+  id: string;
+  name: string;
+  kind: CredentialKind;
+  description: string;
+  requiredBy: string[];
+  configured: boolean;
+  detail?: string;
+}
+
+export interface SetupConfig {
+  geminiApiKey?: string;
+  n8nBaseUrl?: string;
+  n8nApiKey?: string;
+  youtubeClientId?: string;
+  youtubeClientSecret?: string;
+}
+
+export interface N8nCredentialInfo {
+  id: string;
+  name: string;
+  type: string;
+}
+
+export interface SetupStatus {
+  requirements: CredentialRequirement[];
+  config: SetupConfig;
+  n8n: {
+    reachable: boolean;
+    connected: boolean;
+    credentials: N8nCredentialInfo[];
+    error?: string;
+  };
+}

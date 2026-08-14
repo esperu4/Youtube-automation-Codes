@@ -6,6 +6,7 @@ import { ContentQueueView } from './components/ContentQueueView';
 import { ChannelsView } from './components/ChannelsView';
 import { AnalyticsView } from './components/AnalyticsView';
 import { SystemHealthView } from './components/SystemHealthView';
+import { SetupView } from './components/SetupView';
 import { VideoDetailModal } from './components/VideoDetailModal';
 import { ScriptLabModal } from './components/ScriptLabModal';
 
@@ -388,6 +389,10 @@ export default function App() {
                 </button>
               </div>
             </div>
+          )}
+
+          {currentView === 'setup' && (
+            <SetupView />
           )}
 
         </main>

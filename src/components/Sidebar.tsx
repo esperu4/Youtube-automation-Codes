@@ -6,6 +6,7 @@ import {
   BarChart3,
   Cpu,
   Sparkles,
+  Settings,
   AlertCircle
 } from 'lucide-react';
 
@@ -15,7 +16,8 @@ export type DashboardView =
   | 'channels'
   | 'analytics'
   | 'system'
-  | 'script_lab';
+  | 'script_lab'
+  | 'setup';
 
 interface SidebarProps {
   currentView: DashboardView;
@@ -69,6 +71,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
       icon: Sparkles,
       badge: 'AI',
       badgeColor: 'bg-indigo-500/30 text-indigo-300 border border-indigo-500/40',
+    },
+    {
+      id: 'setup' as DashboardView,
+      label: 'Setup & Credentials',
+      icon: Settings,
+      badge: null,
     },
   ];
 

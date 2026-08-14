@@ -1,15 +1,46 @@
 import express from "express";
 import os from "os";
 import path from "path";
+import fs from "fs";
 import { createServer as createViteServer } from "vite";
 import { GoogleGenAI, Type } from "@google/genai";
 
-import { Channel, VideoItem, DLQTask, AIModelConfig, AnalyticsOverview, ContainerStatus, SystemHealthData } from "./src/types.ts";
+import { Channel, VideoItem, DLQTask, AIModelConfig, AnalyticsOverview, ContainerStatus, SystemHealthData, SetupConfig, SetupStatus, CredentialRequirement, N8nCredentialInfo } from "./src/types.ts";
 
 let channelsStore: Channel[] = [];
 let videosStore: VideoItem[] = [];
 let dlqStore: DLQTask[] = [];
 let modelsStore: AIModelConfig[] = [];
+
+const SETUP_FILE = path.join(process.cwd(), "data", "setup.json");
+
+function loadSetupConfig(): SetupConfig {
+  const fromEnv: SetupConfig = {
+    n8nBaseUrl: process.env.N8N_BASE_URL || undefined,
+    n8nApiKey: process.env.N8N_API_KEY || undefined,
+    youtubeClientId: process.env.YOUTUBE_CLIENT_ID || undefined,
+    youtubeClientSecret: process.env.YOUTUBE_CLIENT_SECRET || undefined,
+  };
+  try {
+    if (fs.existsSync(SETUP_FILE)) {
+      const fromFile = JSON.parse(fs.readFileSync(SETUP_FILE, "utf8"));
+      return {
+        ...fromEnv,
+        ...fromFile,
+        // Persisted secrets win over env (they match what the Setup tab saved).
+        geminiApiKey: fromFile.geminiApiKey || fromEnv.geminiApiKey,
+      };
+    }
+  } catch (e) {
+    console.error("setup.json read failed:", e);
+  }
+  return fromEnv;
+}
+
+function saveSetupConfig(cfg: SetupConfig) {
+  fs.mkdirSync(path.dirname(SETUP_FILE), { recursive: true });
+  fs.writeFileSync(SETUP_FILE, JSON.stringify(cfg, null, 2));
+}
 
 function buildHealth(): SystemHealthData {
   const totalMem = os.totalmem() / (1024 ** 3);
@@ -60,9 +91,10 @@ async function startServer() {
 
   app.use(express.json({ limit: "10mb" }));
 
-  // Initialize Gemini AI SDK
-  const apiKey = process.env.GEMINI_API_KEY;
-  const ai = new GoogleGenAI({
+  // Initialize Gemini AI SDK (re-wired from persisted setup.json)
+  const setupCfg = loadSetupConfig();
+  const apiKey = setupCfg.geminiApiKey || process.env.GEMINI_API_KEY;
+  let ai = new GoogleGenAI({
     apiKey: apiKey || "dummy-key",
     httpOptions: {
       headers: {
@@ -70,6 +102,17 @@ async function startServer() {
       },
     },
   });
+
+  function reinitGemini(key: string) {
+    ai = new GoogleGenAI({
+      apiKey: key || "dummy-key",
+      httpOptions: {
+        headers: {
+          "User-Agent": "aistudio-build",
+        },
+      },
+    });
+  }
 
   // REST API Routes
 
@@ -253,6 +296,199 @@ async function startServer() {
       res.status(404).json({ error: "Model not found" });
     }
   });
+
+  // 3.5 Setup & Credentials (drives the Setup tab)
+  app.get("/api/setup", async (_req, res) => {
+    try {
+      const cfg = loadSetupConfig();
+      const geminiConfigured = Boolean((cfg.geminiApiKey || process.env.GEMINI_API_KEY) && (cfg.geminiApiKey || process.env.GEMINI_API_KEY) !== "dummy-key");
+      const n8nReachable = await testN8nReachable(cfg.n8nBaseUrl);
+      let credentials: N8nCredentialInfo[] = [];
+      let connected = false;
+      let n8nError: string | undefined;
+
+      if (cfg.n8nBaseUrl && cfg.n8nApiKey) {
+        try {
+          credentials = await listN8nCredentials(cfg.n8nBaseUrl, cfg.n8nApiKey);
+          connected = true;
+        } catch (e: any) {
+          n8nError = e.message || "n8n API call failed";
+        }
+      }
+
+      const geminiN8n = credentials.find((c) => c.type === "googleGeminiApi");
+      const youtubeN8n = credentials.find((c) => c.type === "youTubeOAuth2Api");
+      const youtubeConfigured = Boolean(cfg.youtubeClientId && cfg.youtubeClientSecret) || Boolean(youtubeN8n);
+
+      const requirements: CredentialRequirement[] = [
+        {
+          id: "gemini",
+          name: "Google Gemini API",
+          kind: "api_key",
+          description: "Powers WF-02 script generation + WF-08 quality scoring, and the AI Script Lab.",
+          requiredBy: ["WF-02 Gemini Script Writer", "WF-08 Gemini Quality Scorer", "AI Script Lab"],
+          configured: geminiConfigured || Boolean(geminiN8n),
+          detail: geminiConfigured ? "Saved in dashboard config" : geminiN8n ? "Exists in n8n" : undefined,
+        },
+        {
+          id: "youtube",
+          name: "YouTube OAuth2",
+          kind: "oauth2",
+          description: "Uploads assembled shorts to YouTube (WF-10). Requires a Google Cloud OAuth2 Client ID/Secret.",
+          requiredBy: ["WF-10 Upload Short to YouTube"],
+          configured: youtubeConfigured,
+          detail: youtubeConfigured ? "Client credentials provided" : undefined,
+        },
+      ];
+
+      const status: SetupStatus = {
+        requirements,
+        config: {
+          geminiApiKey: cfg.geminiApiKey ? "••••••••" : undefined,
+          n8nBaseUrl: cfg.n8nBaseUrl,
+          n8nApiKey: cfg.n8nApiKey ? "••••••••" : undefined,
+          youtubeClientId: cfg.youtubeClientId,
+          youtubeClientSecret: cfg.youtubeClientSecret ? "••••••••" : undefined,
+        },
+        n8n: {
+          reachable: n8nReachable,
+          connected,
+          credentials,
+          error: n8nError,
+        },
+      };
+      res.json(status);
+    } catch (e: any) {
+      res.status(500).json({ error: e.message || "Failed to load setup status" });
+    }
+  });
+
+  app.post("/api/setup/gemini", (req, res) => {
+    const { api_key } = req.body || {};
+    if (!api_key) return res.status(400).json({ error: "api_key is required" });
+    const cfg = loadSetupConfig();
+    cfg.geminiApiKey = String(api_key).trim();
+    saveSetupConfig(cfg);
+    reinitGemini(cfg.geminiApiKey);
+    res.json({ success: true, message: "Gemini API key saved and runtime client re-initialized." });
+  });
+
+  app.post("/api/setup/youtube", (req, res) => {
+    const { client_id, client_secret } = req.body || {};
+    if (!client_id || !client_secret) return res.status(400).json({ error: "client_id and client_secret are required" });
+    const cfg = loadSetupConfig();
+    cfg.youtubeClientId = String(client_id).trim();
+    cfg.youtubeClientSecret = String(client_secret).trim();
+    saveSetupConfig(cfg);
+    res.json({ success: true, message: "YouTube OAuth2 client credentials saved." });
+  });
+
+  app.post("/api/setup/n8n", async (req, res) => {
+    const { base_url, api_key } = req.body || {};
+    if (!base_url) return res.status(400).json({ error: "base_url is required" });
+    const cfg = loadSetupConfig();
+    cfg.n8nBaseUrl = String(base_url).replace(/\/+$/, "");
+    if (api_key) cfg.n8nApiKey = String(api_key).trim();
+    saveSetupConfig(cfg);
+
+    const reachable = await testN8nReachable(cfg.n8nBaseUrl);
+    let credentials: N8nCredentialInfo[] = [];
+    let connected = false;
+    let error: string | undefined;
+    if (cfg.n8nApiKey) {
+      try {
+        credentials = await listN8nCredentials(cfg.n8nBaseUrl, cfg.n8nApiKey);
+        connected = true;
+      } catch (e: any) {
+        error = e.message || "n8n API call failed";
+      }
+    }
+    res.json({ success: true, reachable, connected, credentials, error });
+  });
+
+  app.post("/api/setup/provision", async (req, res) => {
+    try {
+      const { type } = req.body || {};
+      const cfg = loadSetupConfig();
+      if (!cfg.n8nBaseUrl || !cfg.n8nApiKey) {
+        return res.status(400).json({ error: "n8n connection (base_url + api_key) must be configured first." });
+      }
+
+      if (type === "googleGeminiApi") {
+        const key = cfg.geminiApiKey || process.env.GEMINI_API_KEY;
+        if (!key || key === "dummy-key") {
+          return res.status(400).json({ error: "Save a Gemini API key first." });
+        }
+        const created = await createN8nCredential(cfg.n8nBaseUrl, cfg.n8nApiKey, {
+          name: "Shorts Factory — Gemini API",
+          type: "googleGeminiApi",
+          data: { apiKey: key },
+        });
+        return res.json({ success: true, message: "Gemini credential created in n8n.", credential: created });
+      }
+
+      if (type === "youTubeOAuth2Api") {
+        if (!cfg.youtubeClientId || !cfg.youtubeClientSecret) {
+          return res.status(400).json({ error: "Save YouTube client_id + client_secret first." });
+        }
+        const created = await createN8nCredential(cfg.n8nBaseUrl, cfg.n8nApiKey, {
+          name: "Shorts Factory — YouTube OAuth2",
+          type: "youTubeOAuth2Api",
+          data: {
+            clientId: cfg.youtubeClientId,
+            clientSecret: cfg.youtubeClientSecret,
+            authUri: "https://accounts.google.com/o/oauth2/auth",
+            tokenUri: "https://oauth2.googleapis.com/token",
+            scopes: ["https://www.googleapis.com/auth/youtube.upload", "https://www.googleapis.com/auth/youtube"],
+          },
+        });
+        return res.json({
+          success: true,
+          message: "YouTube OAuth2 credential created in n8n. Finish by connecting the account in the n8n UI (green Connect button).",
+          credential: created,
+        });
+      }
+
+      res.status(400).json({ error: `Unsupported credential type: ${type}` });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message || "Provisioning failed" });
+    }
+  });
+
+  async function testN8nReachable(baseUrl?: string): Promise<boolean> {
+    if (!baseUrl) return false;
+    try {
+      const r = await fetch(`${baseUrl}/healthz`, { signal: AbortSignal.timeout(8000) });
+      return r.ok;
+    } catch {
+      return false;
+    }
+  }
+
+  async function listN8nCredentials(baseUrl: string, apiKey: string): Promise<N8nCredentialInfo[]> {
+    const r = await fetch(`${baseUrl}/api/v1/credentials`, {
+      headers: { "X-N8N-API-KEY": apiKey, Accept: "application/json" },
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!r.ok) {
+      throw new Error(`n8n API returned ${r.status}: ${(await r.text()).slice(0, 200)}`);
+    }
+    const data: any = await r.json();
+    return (data.data || []).map((c: any) => ({ id: String(c.id), name: c.name, type: c.type }));
+  }
+
+  async function createN8nCredential(baseUrl: string, apiKey: string, payload: { name: string; type: string; data: Record<string, any> }) {
+    const r = await fetch(`${baseUrl}/api/v1/credentials`, {
+      method: "POST",
+      headers: { "X-N8N-API-KEY": apiKey, "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!r.ok) {
+      throw new Error(`n8n credential creation failed (${r.status}): ${(await r.text()).slice(0, 300)}`);
+    }
+    return r.json();
+  }
 
   // 4. n8n Daily Content Planner Manual Trigger (WF-01)
   app.post("/api/n8n/trigger-planner", (req, res) => {
