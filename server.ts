@@ -14,6 +14,72 @@ let modelsStore: AIModelConfig[] = [];
 
 const SETUP_FILE = path.join(process.cwd(), "data", "setup.json");
 
+// Free AI LLM providers that can back the n8n chat-model nodes.
+// Each entry maps the Setup-tab id -> n8n credential type -> config field -> env var.
+const LLM_PROVIDERS: {
+  id: string;
+  name: string;
+  kind: "api_key";
+  description: string;
+  credentialType: string;
+  field: keyof SetupConfig;
+  envKey: string;
+  signupUrl: string;
+}[] = [
+  {
+    id: "groq",
+    name: "Groq",
+    kind: "api_key",
+    description: "Free-tier fast inference for Llama & open models. Powers Groq Chat Model in n8n.",
+    credentialType: "groqApi",
+    field: "groqApiKey",
+    envKey: "GROQ_API_KEY",
+    signupUrl: "https://console.groq.com/keys",
+  },
+  {
+    id: "mistral",
+    name: "Mistral AI",
+    kind: "api_key",
+    description: "Free tier (experimental plan) with strong multilingual models. Powers Mistral Cloud Chat Model.",
+    credentialType: "mistralCloudApi",
+    field: "mistralApiKey",
+    envKey: "MISTRAL_API_KEY",
+    signupUrl: "https://console.mistral.ai/api-keys",
+  },
+  {
+    id: "openrouter",
+    name: "OpenRouter",
+    kind: "api_key",
+    description: "One key for hundreds of models incl. free :free endpoints. Powers OpenRouter Chat Model.",
+    credentialType: "openRouterApi",
+    field: "openRouterApiKey",
+    envKey: "OPENROUTER_API_KEY",
+    signupUrl: "https://openrouter.ai/settings/keys",
+  },
+  {
+    id: "deepseek",
+    name: "DeepSeek",
+    kind: "api_key",
+    description: "Ultra-cheap (near-free) reasoning-capable chat models. Powers DeepSeek Chat Model.",
+    credentialType: "deepSeekApi",
+    field: "deepSeekApiKey",
+    envKey: "DEEPSEEK_API_KEY",
+    signupUrl: "https://platform.deepseek.com/api_keys",
+  },
+  {
+    id: "huggingface",
+    name: "Hugging Face",
+    kind: "api_key",
+    description: "Free inference for thousands of open models with a token. Powers Hugging Face Inference Model.",
+    credentialType: "huggingFaceApi",
+    field: "huggingFaceApiKey",
+    envKey: "HUGGINGFACE_API_KEY",
+    signupUrl: "https://huggingface.co/settings/tokens",
+  },
+];
+
+const envLlmKeys = LLM_PROVIDERS.map((p) => ({ envKey: p.envKey, field: p.field }));
+
 function loadSetupConfig(): SetupConfig {
   const fromEnv: SetupConfig = {
     n8nBaseUrl: process.env.N8N_BASE_URL || undefined,
@@ -21,15 +87,20 @@ function loadSetupConfig(): SetupConfig {
     youtubeClientId: process.env.YOUTUBE_CLIENT_ID || undefined,
     youtubeClientSecret: process.env.YOUTUBE_CLIENT_SECRET || undefined,
   };
+  // LLM provider keys pulled from env when not yet persisted.
+  envLlmKeys.forEach(({ envKey, field }) => {
+    if (process.env[envKey]) (fromEnv as any)[field] = process.env[envKey];
+  });
   try {
     if (fs.existsSync(SETUP_FILE)) {
       const fromFile = JSON.parse(fs.readFileSync(SETUP_FILE, "utf8"));
-      return {
-        ...fromEnv,
-        ...fromFile,
-        // Persisted secrets win over env (they match what the Setup tab saved).
-        geminiApiKey: fromFile.geminiApiKey || fromEnv.geminiApiKey,
-      };
+      const cfg = { ...fromEnv, ...fromFile };
+      // Persisted secrets win over env (they match what the Setup tab saved).
+      const fileKeys = [["geminiApiKey"], ...envLlmKeys.map((k) => [k.field])].map(([f]) => f);
+      fileKeys.forEach((f) => {
+        if (fromFile[f] != null) cfg[f] = fromFile[f];
+      });
+      return cfg;
     }
   } catch (e) {
     console.error("setup.json read failed:", e);
@@ -341,15 +412,34 @@ async function startServer() {
         },
       ];
 
+      for (const p of LLM_PROVIDERS) {
+        const key = cfg[p.field];
+        const n8nCred = credentials.find((c) => c.type === p.credentialType);
+        requirements.push({
+          id: p.id,
+          name: p.name,
+          kind: p.kind,
+          description: p.description,
+          requiredBy: [p.credentialType],
+          configured: Boolean(key) || Boolean(n8nCred),
+          detail: key ? "Saved in dashboard config" : n8nCred ? "Exists in n8n" : undefined,
+        });
+      }
+
+      const maskedConfig: SetupConfig = {
+        geminiApiKey: cfg.geminiApiKey ? "••••••••" : undefined,
+        n8nBaseUrl: cfg.n8nBaseUrl,
+        n8nApiKey: cfg.n8nApiKey ? "••••••••" : undefined,
+        youtubeClientId: cfg.youtubeClientId,
+        youtubeClientSecret: cfg.youtubeClientSecret ? "••••••••" : undefined,
+      };
+      for (const p of LLM_PROVIDERS) {
+        (maskedConfig as any)[p.field] = cfg[p.field] ? "••••••••" : undefined;
+      }
+
       const status: SetupStatus = {
         requirements,
-        config: {
-          geminiApiKey: cfg.geminiApiKey ? "••••••••" : undefined,
-          n8nBaseUrl: cfg.n8nBaseUrl,
-          n8nApiKey: cfg.n8nApiKey ? "••••••••" : undefined,
-          youtubeClientId: cfg.youtubeClientId,
-          youtubeClientSecret: cfg.youtubeClientSecret ? "••••••••" : undefined,
-        },
+        config: maskedConfig,
         n8n: {
           reachable: n8nReachable,
           connected,
@@ -371,6 +461,18 @@ async function startServer() {
     saveSetupConfig(cfg);
     reinitGemini(cfg.geminiApiKey);
     res.json({ success: true, message: "Gemini API key saved and runtime client re-initialized." });
+  });
+
+  // Generic save for any free LLM provider key.
+  app.post("/api/setup/llm", (req, res) => {
+    const { provider, api_key } = req.body || {};
+    const def = LLM_PROVIDERS.find((p) => p.id === provider);
+    if (!def) return res.status(400).json({ error: `Unknown provider: ${provider}` });
+    if (!api_key) return res.status(400).json({ error: "api_key is required" });
+    const cfg = loadSetupConfig();
+    (cfg as any)[def.field] = String(api_key).trim();
+    saveSetupConfig(cfg);
+    res.json({ success: true, message: `${def.name} API key saved.` });
   });
 
   app.post("/api/setup/youtube", (req, res) => {
@@ -447,6 +549,21 @@ async function startServer() {
           message: "YouTube OAuth2 credential created in n8n. Finish by connecting the account in the n8n UI (green Connect button).",
           credential: created,
         });
+      }
+
+      // Free LLM provider provisioning (apiKey-style credentials).
+      const llmDef = LLM_PROVIDERS.find((p) => p.credentialType === type);
+      if (llmDef) {
+        const key = (cfg as any)[llmDef.field] || process.env[llmDef.envKey];
+        if (!key) {
+          return res.status(400).json({ error: `Save a ${llmDef.name} API key first.` });
+        }
+        const created = await createN8nCredential(cfg.n8nBaseUrl, cfg.n8nApiKey, {
+          name: `Shorts Factory — ${llmDef.name}`,
+          type: llmDef.credentialType,
+          data: { apiKey: key },
+        });
+        return res.json({ success: true, message: `${llmDef.name} credential created in n8n.`, credential: created });
       }
 
       res.status(400).json({ error: `Unsupported credential type: ${type}` });

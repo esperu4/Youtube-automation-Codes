@@ -159,6 +159,11 @@ export interface CredentialRequirement {
 
 export interface SetupConfig {
   geminiApiKey?: string;
+  groqApiKey?: string;
+  mistralApiKey?: string;
+  openRouterApiKey?: string;
+  deepSeekApiKey?: string;
+  huggingFaceApiKey?: string;
   n8nBaseUrl?: string;
   n8nApiKey?: string;
   youtubeClientId?: string;

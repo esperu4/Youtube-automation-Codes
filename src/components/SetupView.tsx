@@ -15,6 +15,29 @@ import {
 } from 'lucide-react';
 import { SetupStatus } from '../types';
 
+const LLM_PROVIDER_META: Record<string, { placeholder: string; signup: string }> = {
+  groq: {
+    placeholder: 'gsk_… Groq API key',
+    signup: 'https://console.groq.com/keys',
+  },
+  mistral: {
+    placeholder: 'Mistral API key (console.mistral.ai)',
+    signup: 'https://console.mistral.ai/api-keys',
+  },
+  openrouter: {
+    placeholder: 'sk-or-v1-… OpenRouter key',
+    signup: 'https://openrouter.ai/settings/keys',
+  },
+  deepseek: {
+    placeholder: 'sk-… DeepSeek API key',
+    signup: 'https://platform.deepseek.com/api_keys',
+  },
+  huggingface: {
+    placeholder: 'hf_… Hugging Face token',
+    signup: 'https://huggingface.co/settings/tokens',
+  },
+};
+
 export const SetupView: React.FC = () => {
   const [status, setStatus] = useState<SetupStatus | null>(null);
   const [loading, setLoading] = useState(true);
@@ -26,6 +49,7 @@ export const SetupView: React.FC = () => {
   const [n8nApiKey, setN8nApiKey] = useState('');
   const [ytClientId, setYtClientId] = useState('');
   const [ytClientSecret, setYtClientSecret] = useState('');
+  const [llmKeys, setLlmKeys] = useState<Record<string, string>>({});
   const [showSecret, setShowSecret] = useState(false);
   const [provisioning, setProvisioning] = useState<string | null>(null);
 
@@ -69,6 +93,32 @@ export const SetupView: React.FC = () => {
       await load();
     } catch (e) {
       showToast('Failed to save Gemini key.');
+    } finally {
+      setSaving(null);
+    }
+  };
+
+  // Free LLM providers (data-driven from the requirements list).
+  const llmProviders = (status?.requirements || []).filter(
+    (r) => ['groq', 'mistral', 'openrouter', 'deepseek', 'huggingface'].includes(r.id)
+  );
+
+  const saveLlmKey = async (providerId: string) => {
+    const key = (llmKeys[providerId] || '').trim();
+    if (!key) return showToast('Paste an API key first.');
+    setSaving(providerId);
+    try {
+      const res = await fetch('/api/setup/llm', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ provider: providerId, api_key: key }),
+      });
+      const data = await res.json();
+      showToast(data.message || data.error || 'Saved.');
+      setLlmKeys((prev) => ({ ...prev, [providerId]: '' }));
+      await load();
+    } catch (e) {
+      showToast('Failed to save key.');
     } finally {
       setSaving(null);
     }
@@ -280,6 +330,80 @@ export const SetupView: React.FC = () => {
             {provisioning === 'googleGeminiApi' ? 'Provisioning…' : 'Provision this key into n8n'}
           </button>
         )}
+      </div>
+
+      {/* Free LLM Providers */}
+      <div className="bg-white border border-slate-200 rounded-lg p-5 shadow-sm">
+        <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
+          <KeyRound className="h-4 w-4 text-emerald-500" /> Free AI LLM Providers
+        </h3>
+        <p className="text-xs text-slate-500 mt-1 mb-4">
+          Optional free-tier LLM providers for n8n chat-model nodes (model fallbacks / future stages). Save a key here
+          and (with an n8n connection) provision it straight into n8n as a credential.
+        </p>
+        <div className="grid md:grid-cols-2 gap-4">
+          {llmProviders.map((p) => {
+            const meta = LLM_PROVIDER_META[p.id] || { placeholder: 'API key', signup: '#' };
+            const configured = p.configured;
+            return (
+              <div
+                key={p.id}
+                className={`border rounded-xl p-4 flex flex-col gap-2 ${
+                  configured ? 'border-emerald-300 bg-emerald-50/40' : 'border-slate-200 bg-white'
+                }`}
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <div className="font-bold text-slate-900 text-sm">{p.name}</div>
+                  {configured ? (
+                    <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">
+                      <CheckCircle2 className="h-3.5 w-3.5" /> Saved
+                    </span>
+                  ) : (
+                    <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">
+                      <AlertCircle className="h-3 w-3" /> Not set
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs text-slate-600">{p.description}</p>
+                <div className="flex gap-2 flex-wrap mt-1">
+                  <input
+                    type={showSecret ? 'text' : 'password'}
+                    value={llmKeys[p.id] || ''}
+                    onChange={(e) => setLlmKeys((prev) => ({ ...prev, [p.id]: e.target.value }))}
+                    placeholder={meta.placeholder}
+                    className="flex-1 min-w-[180px] px-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
+                  <button
+                    onClick={() => saveLlmKey(p.id)}
+                    disabled={saving === p.id}
+                    className="px-3 py-2 text-xs font-bold rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white disabled:opacity-50 cursor-pointer"
+                  >
+                    {saving === p.id ? 'Saving…' : 'Save'}
+                  </button>
+                </div>
+                <div className="flex items-center gap-3 mt-1 text-[11px]">
+                  <a
+                    className="text-indigo-600 underline"
+                    href={meta.signup}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Get key
+                  </a>
+                  {status?.n8n.connected && (
+                    <button
+                      onClick={() => provision(p.id === 'openrouter' ? 'openRouterApi' : p.id === 'huggingface' ? 'huggingFaceApi' : p.id === 'mistral' ? 'mistralCloudApi' : `${p.id}Api`)}
+                      disabled={provisioning !== null || !configured}
+                      className="text-slate-600 underline hover:text-slate-900 disabled:opacity-40 disabled:no-underline cursor-pointer"
+                    >
+                      {provisioning === p.id ? 'Provisioning…' : 'Provision into n8n'}
+                    </button>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
       </div>
 
       {/* YouTube OAuth2 */}
